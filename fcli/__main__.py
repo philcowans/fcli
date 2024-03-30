@@ -1,6 +1,7 @@
 '''Entry point into fcli application'''
 import json
 import os
+import subprocess
 import sys
 import textwrap
 
@@ -9,19 +10,21 @@ import requests
 
 from .analytics import Ratings
 from .config import Config
+from .mastodon_api import accounts_following, accounts_lookup
 from .post import Post
 from .post_list import PostList
-from .state import state_filename, cache_base, staging_base, processed_base
+from .state import following_filename, state_filename, cache_base, staging_base, processed_base, outbox_base, sent_base
 
 if sys.argv[1] == 'sync':
     config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
     server = config.mastodon_server()
+    username = config.mastodon_username()
     client_id = config.mastodon_client_id()
     client_secret = config.mastodon_client_secret()
     auth_url = (
         f'https://{server}/oauth/authorize'
         f'?client_id={client_id}'
-        '&scope=read'
+        '&scope=read+write'
         '&redirect_uri=urn:ietf:wg:oauth:2.0:oob'
         '&response_type=code'
     )
@@ -34,7 +37,7 @@ if sys.argv[1] == 'sync':
         'redirect_uri': 'urn:ietf:wg:oauth:2.0:oob',
         'grant_type': 'authorization_code',
         'code': code,
-        'scope': 'read',
+        'scope': 'read write',
     }
 
     response = requests.post(
@@ -45,6 +48,35 @@ if sys.argv[1] == 'sync':
 
     token = response.json()['access_token']
     print(f'Token is {token}')
+
+    user_id = accounts_lookup(username, server=server, token=token)['id']
+    print(f'User ID is {user_id}')
+
+    following = accounts_following(user_id, server=server, token=token)
+    with open(following_filename(), 'w', encoding='utf-8') as f:
+        json.dump(following, f)
+
+    for file in os.listdir(outbox_base()):
+        with open(outbox_base() + '/' + file, 'r') as f:
+            content = f.read()
+
+        form_data = {
+            'status': content,
+            'visibility': 'public',
+            'language': 'en',
+        }
+
+        response = requests.post(
+            f'https://{server}/api/v1/statuses',
+            headers={
+                'Authorization': f'Bearer {token}',
+            },
+            data=form_data,
+            timeout=60
+        )
+
+        print(response)
+        os.rename(f'{outbox_base()}/{file}', f'{sent_base()}/{file}')
 
     with open(state_filename(), encoding='utf-8') as f:
         state = json.load(f)
@@ -79,6 +111,26 @@ if sys.argv[1] == 'sync':
             'max_id': max_id
         }, f)
 
+elif sys.argv[1] == 'prompt':
+    files = list(os.listdir(cache_base()))
+    for file in files:
+        post = Post.from_file(f'{cache_base()}/{file}')
+        print('# Post')
+        print('## URL')
+        print(post.url())
+        print('')
+        if post.content():
+            print('## Content')
+            print(textwrap.fill(BeautifulSoup(post.content(), features='lxml').get_text(), 80))
+            print('')
+        if post.reblog_content():
+            print('## Reblog Content')
+            print(textwrap.fill(
+                 BeautifulSoup(post.reblog_content(), features='lxml').get_text(),
+                 80
+            ))
+            print('')
+
 elif sys.argv[1] == 'review':
     post_list = PostList()
     post_list.plan()
@@ -111,27 +163,32 @@ elif sys.argv[1] == 'review':
             for url in post.media_links():
                 print(url)
             print('')
-        action = input(
-            'Action? (A)ctionable / (I)nteresting / (N)ot interesting / (U)nsure / (S)ource '
-        )
-        if action == 'a':
-            os.rename(f'{staging_base()}/{file}', f'{processed_base()}/actionable/{file}')
-        if action == 'i':
-            os.rename(f'{staging_base()}/{file}', f'{processed_base()}/interesting/{file}')
-        if action == 'n':
-            os.rename(f'{staging_base()}/{file}', f'{processed_base()}/not_interesting/{file}')
-        if action == 's':
-            print(post)
-            print('')
+        finished = False # pylint: disable=invalid-name
+        while not finished:
             action = input(
-                'Action? (A)ctionable / (I)nteresting / (N)ot interesting / (U)nsure / (S)ource '
+                'Action? (A)ctionable / (I)nteresting / (N)ot interesting / '
+                '(U)nsure / (S)ource / (O)pen'
             )
             if action == 'a':
                 os.rename(f'{staging_base()}/{file}', f'{processed_base()}/actionable/{file}')
+                finished = True # pylint: disable=invalid-name
             if action == 'i':
                 os.rename(f'{staging_base()}/{file}', f'{processed_base()}/interesting/{file}')
+                finished = True # pylint: disable=invalid-name
             if action == 'n':
                 os.rename(f'{staging_base()}/{file}', f'{processed_base()}/not_interesting/{file}')
+                finished = True # pylint: disable=invalid-name
+            if action == 's':
+                print(post)
+                print('')
+            if action == 'o':
+                link_type = input('Link type? (L)ink / (A)ttachment')
+                link_index = int(input('Link number? (Zero indexed)'))
+                if link_type == 'l':
+                    url = post.content_links()[link_index]
+                elif link_type == 'a':
+                    url = post.media_links()[link_index]
+                subprocess.run(['open', url], check=False)
 
 elif sys.argv[1] == 'stats':
     Ratings().account_summary().write_lists()
@@ -139,22 +196,10 @@ elif sys.argv[1] == 'stats':
 elif sys.argv[1] == 'actions':
     files = list(os.listdir(f'{processed_base()}/actionable'))
     for file in files:
-        with open(f'{processed_base()}/actionable/{file}', encoding='utf--8') as f:
-            post = json.load(f)
-        name = post['account']['display_name']
+        post = Post.from_file(f'{processed_base()}/actionable/{file}')
+        name = post.display_name()
         title = f'Mastodon action: {name}'
-        note = textwrap.fill(BeautifulSoup(post['content'], features='lxml').get_text(), 80) # pylint: disable=invalid-name
-        media_attachments = post['media_attachments']
-        if post['reblog']:
-            note += '\n## Reblog\n'
-            note += textwrap.fill(
-                BeautifulSoup(post['reblog']['content'], features='lxml').get_text(), 80
-            )
-            media_attachments += post['reblog']['media_attachments']
-        if len(media_attachments) > 0:
-            note += '\n## Attachments\n'
-            for a in media_attachments:
-                note += a['url'] + '\n'
+        note = post.text_for_action()
         config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
         everdo_key = config.everdo_key()
         r = requests.post(

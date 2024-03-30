@@ -16,6 +16,10 @@ class Config:
         ''' Mastodon server to connect to. '''
         return self._config['Mastodon']['Server']
 
+    def mastodon_username(self):
+        ''' Mastodon server to connect to. '''
+        return self._config['Mastodon']['Username']
+
     def mastodon_client_id(self):
         ''' Mastodon client / application ID. '''
         return self._config['Mastodon']['ClientID']

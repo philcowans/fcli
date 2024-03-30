@@ -27,3 +27,15 @@ def lqa_filename():
 def hqa_filename():
     '''Filename for list of high quality accounts'''
     return _state_base() + '/high_quality_accounts.txt'
+
+def following_filename():
+    '''Filename to use for following state file'''
+    return _state_base() + '/following.json'
+
+def outbox_base():
+    '''Base directory for outbox'''
+    return _state_base() + '/outbox'
+
+def sent_base():
+    '''Base directory for sent posts'''
+    return _state_base() + '/sent'

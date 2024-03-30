@@ -1,5 +1,6 @@
 '''Functionality related to representing individual posts'''
 import json
+import textwrap
 
 from bs4 import BeautifulSoup, SoupStrainer
 
@@ -58,6 +59,22 @@ class Post:
             self._data['reblog']
             and self._data['reblog']['content']
         )
+
+    def text_for_action(self):
+        note = textwrap.fill(BeautifulSoup(self._data['content'], features='lxml').get_text(), 80) # pylint: disable=invalid-name
+        media_attachments = self._data['media_attachments']
+        if self._data['reblog']:
+            note += '\n## Reblog\n'
+            note += textwrap.fill(
+                BeautifulSoup(self._data['reblog']['content'], features='lxml').get_text(), 80
+            )
+            media_attachments += self._data['reblog']['media_attachments']
+        if len(media_attachments) > 0:
+            note += '\n## Attachments\n'
+            for a in media_attachments:
+                note += a['url'] + '\n'
+        note += '\n\nURL: ' + self.url() + '\n'
+        return note
 
     def url(self):
         '''The URL for the post, or for the reblogged content'''

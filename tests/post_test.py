@@ -39,3 +39,16 @@ def test_from_file():
     '''Test that Post can be deserialised from file'''
     subject = Post.from_file(os.path.dirname(os.path.realpath(__file__)) + '/fixtures/test_post.json')
     assert subject.display_name() == 'Howard Rheingold'
+
+def test_text_for_action():
+    subject = Post.from_file(os.path.dirname(os.path.realpath(__file__)) + '/fixtures/test_post.json')
+    assert subject.text_for_action() == '''
+## Reblog
+I just saw that @doctorow @pluralistic Cory Doctorow’s  October 2023 keynote
+from DEFCON 31 on #Enshittification of the internet is on YouTube (speaking
+of...) - it’s a worthy 40 minutes about what should come next in the age of
+crumbling, nonsensical and hyper manipulative platforms we somehow all rely on.
+https://youtu.be/rimtaSgGz_4?si=-mq3KmQbihVKYc-r
+
+URL: https://mstdn.ca/@jocelyn/111353289971446465
+'''
