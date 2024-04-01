@@ -15,7 +15,7 @@ from .post import Post
 from .post_list import PostList
 from .state import following_filename, state_filename, cache_base, staging_base, processed_base, outbox_base, sent_base
 
-if sys.argv[1] == 'sync':
+def _do_sync():
     config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
     server = config.mastodon_server()
     username = config.mastodon_username()
@@ -111,27 +111,28 @@ if sys.argv[1] == 'sync':
             'max_id': max_id
         }, f)
 
-elif sys.argv[1] == 'prompt':
-    files = list(os.listdir(cache_base()))
+def _do_actions():
+    files = list(os.listdir(f'{processed_base()}/actionable'))
     for file in files:
-        post = Post.from_file(f'{cache_base()}/{file}')
-        print('# Post')
-        print('## URL')
-        print(post.url())
-        print('')
-        if post.content():
-            print('## Content')
-            print(textwrap.fill(BeautifulSoup(post.content(), features='lxml').get_text(), 80))
-            print('')
-        if post.reblog_content():
-            print('## Reblog Content')
-            print(textwrap.fill(
-                 BeautifulSoup(post.reblog_content(), features='lxml').get_text(),
-                 80
-            ))
-            print('')
+        post = Post.from_file(f'{processed_base()}/actionable/{file}')
+        name = post.display_name()
+        title = f'Mastodon action: {name}'
+        note = post.text_for_action()
+        config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
+        everdo_key = config.everdo_key()
+        r = requests.post(
+            f'https://localhost:11111/api/items?key={everdo_key}',
+            json={'title': title, 'note': note},
+            verify=False,
+            timeout=60
+        )
+        print(r.status_code)
+        os.rename(f'{processed_base()}/actionable/{file}', f'{processed_base()}/actioned/{file}')
 
-elif sys.argv[1] == 'review':
+if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
+    Ratings().account_summary().write_lists()
+    _do_sync()
+
     post_list = PostList()
     post_list.plan()
     files = post_list.get_filenames()
@@ -190,22 +191,36 @@ elif sys.argv[1] == 'review':
                     url = post.media_links()[link_index]
                 subprocess.run(['open', url], check=False)
 
+    _do_actions()
+    files = list(os.listdir(f'{cache_base()}'))
+    for file in files:
+        os.rename(f'{cache_base()}/{file}', f'{processed_base()}/skipped/{file}')
+elif sys.argv[1] == 'sync':
+    _do_sync()
+
+elif sys.argv[1] == 'prompt':
+    files = list(os.listdir(cache_base()))
+    for file in files:
+        post = Post.from_file(f'{cache_base()}/{file}')
+        print('# Post')
+        print('## URL')
+        print(post.url())
+        print('')
+        if post.content():
+            print('## Content')
+            print(textwrap.fill(BeautifulSoup(post.content(), features='lxml').get_text(), 80))
+            print('')
+        if post.reblog_content():
+            print('## Reblog Content')
+            print(textwrap.fill(
+                 BeautifulSoup(post.reblog_content(), features='lxml').get_text(),
+                 80
+            ))
+            print('')
+
+
 elif sys.argv[1] == 'stats':
     Ratings().account_summary().write_lists()
 
 elif sys.argv[1] == 'actions':
-    files = list(os.listdir(f'{processed_base()}/actionable'))
-    for file in files:
-        post = Post.from_file(f'{processed_base()}/actionable/{file}')
-        name = post.display_name()
-        title = f'Mastodon action: {name}'
-        note = post.text_for_action()
-        config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
-        everdo_key = config.everdo_key()
-        r = requests.post(
-            f'https://localhost:11111/api/items?key={everdo_key}',
-            json={'title': title, 'note': note},
-            verify=False,
-            timeout=60
-        )
-        print(r.status_code)
+    _do_actions()
