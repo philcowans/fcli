@@ -16,6 +16,7 @@ from .post_list import PostList
 from .state import following_filename, state_filename, cache_base, staging_base, processed_base, outbox_base, sent_base
 
 def _do_sync():
+    print('Authenticating ...')
     config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
     server = config.mastodon_server()
     username = config.mastodon_username()
@@ -28,7 +29,7 @@ def _do_sync():
         '&redirect_uri=urn:ietf:wg:oauth:2.0:oob'
         '&response_type=code'
     )
-
+    print('')
     code = input(f'Please visit\n\n{auth_url}\n\nand past code here: ')
 
     form_data = {
@@ -47,15 +48,15 @@ def _do_sync():
     )
 
     token = response.json()['access_token']
-    print(f'Token is {token}')
-
     user_id = accounts_lookup(username, server=server, token=token)['id']
-    print(f'User ID is {user_id}')
-
+    print('')
+    print('done.')
+    print('Synchronising following list ... ', end='')
     following = accounts_following(user_id, server=server, token=token)
     with open(following_filename(), 'w', encoding='utf-8') as f:
         json.dump(following, f)
-
+    print('done.')
+    print('Posting queued statuses ... ', end='')
     for file in os.listdir(outbox_base()):
         with open(outbox_base() + '/' + file, 'r') as f:
             content = f.read()
@@ -75,9 +76,9 @@ def _do_sync():
             timeout=60
         )
 
-        print(response)
         os.rename(f'{outbox_base()}/{file}', f'{sent_base()}/{file}')
-
+    print('done.')
+    print('Fetching new posts ... ', end='')
     with open(state_filename(), encoding='utf-8') as f:
         state = json.load(f)
 
@@ -87,7 +88,6 @@ def _do_sync():
 
     while num_fetched > 0:
         url = f'https://{server}/api/v1/timelines/home?min_id={max_id}'
-        print(f'Downloading from {url}')
         response = requests.get(
             url,
             headers={
@@ -103,15 +103,15 @@ def _do_sync():
             max_id = max([max_id, int(response_id)])
             with open(f'{cache_base()}/{response_id}.json', 'w', encoding='utf-8') as f:
                 json.dump(response, f)
-        print(f'Suucessfully downloaded {num_fetched} entries')
-
 
     with open(state_filename(), 'w', encoding='utf-8') as f:
         json.dump({
             'max_id': max_id
         }, f)
+    print('done.')
 
 def _do_actions():
+    print('Sending actions to Everdo ... ', end='')
     files = list(os.listdir(f'{processed_base()}/actionable'))
     for file in files:
         post = Post.from_file(f'{processed_base()}/actionable/{file}')
@@ -126,11 +126,13 @@ def _do_actions():
             verify=False,
             timeout=60
         )
-        print(r.status_code)
         os.rename(f'{processed_base()}/actionable/{file}', f'{processed_base()}/actioned/{file}')
+    print('done.')
 
 if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
+    print('Updating stats ... ', end='')
     Ratings().account_summary().write_lists()
+    print('done.')
     _do_sync()
 
     post_list = PostList()
