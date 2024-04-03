@@ -169,11 +169,14 @@ if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
         finished = False # pylint: disable=invalid-name
         while not finished:
             action = input(
-                'Action? (A)ctionable / (I)nteresting / (N)ot interesting / '
+                'Action? (A)ctionable / (B)oost / (I)nteresting / (N)ot interesting / '
                 '(U)nsure / (S)ource / (O)pen'
             )
             if action == 'a':
                 os.rename(f'{staging_base()}/{file}', f'{processed_base()}/actionable/{file}')
+                finished = True # pylint: disable=invalid-name
+            if action == 'b':
+                os.rename(f'{staging_base()}/{file}', f'{processed_base()}/boostable/{file}')
                 finished = True # pylint: disable=invalid-name
             if action == 'i':
                 os.rename(f'{staging_base()}/{file}', f'{processed_base()}/interesting/{file}')
