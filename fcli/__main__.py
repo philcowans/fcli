@@ -1,9 +1,11 @@
 '''Entry point into fcli application'''
 import json
+import logging
 import os
 import subprocess
 import sys
 import textwrap
+import urllib3
 
 from bs4 import BeautifulSoup
 import requests
@@ -15,8 +17,10 @@ from .post import Post
 from .post_list import PostList
 from .state import following_filename, state_filename, cache_base, staging_base, processed_base, outbox_base, sent_base
 
+logging.captureWarnings(True)
+
 def _do_sync():
-    print('Authenticating ...')
+    print('Authenticating ... ', flush=True)
     config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
     server = config.mastodon_server()
     username = config.mastodon_username()
@@ -51,12 +55,12 @@ def _do_sync():
     user_id = accounts_lookup(username, server=server, token=token)['id']
     print('')
     print('done.')
-    print('Synchronising following list ... ', end='')
+    print('Synchronising following list ... ', flush=True, end='')
     following = accounts_following(user_id, server=server, token=token)
     with open(following_filename(), 'w', encoding='utf-8') as f:
         json.dump(following, f)
     print('done.')
-    print('Posting queued statuses ... ', end='')
+    print('Posting queued statuses ... ', flush=True, end='')
     for file in os.listdir(outbox_base()):
         with open(outbox_base() + '/' + file, 'r') as f:
             content = f.read()
@@ -78,7 +82,7 @@ def _do_sync():
 
         os.rename(f'{outbox_base()}/{file}', f'{sent_base()}/{file}')
     print('done.')
-    print('Fetching new posts ... ', end='')
+    print('Fetching new posts ... ', flush=True, end='')
     with open(state_filename(), encoding='utf-8') as f:
         state = json.load(f)
 
@@ -109,32 +113,35 @@ def _do_sync():
             'max_id': max_id
         }, f)
     print('done.')
+    return token
 
 def _do_actions():
-    print('Sending actions to Everdo ... ', end='')
+    print('Sending actions to Everdo ... ', flush=True, end='')
     files = list(os.listdir(f'{processed_base()}/actionable'))
-    for file in files:
-        post = Post.from_file(f'{processed_base()}/actionable/{file}')
-        name = post.display_name()
-        title = f'Mastodon action: {name}'
-        note = post.text_for_action()
-        config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
-        everdo_key = config.everdo_key()
-        r = requests.post(
-            f'https://localhost:11111/api/items?key={everdo_key}',
-            json={'title': title, 'note': note},
-            verify=False,
-            timeout=60
-        )
-        os.rename(f'{processed_base()}/actionable/{file}', f'{processed_base()}/actioned/{file}')
-    print('done.')
+    try:
+        for file in files:
+            post = Post.from_file(f'{processed_base()}/actionable/{file}')
+            name = post.display_name()
+            title = f'Mastodon action: {name}'
+            note = post.text_for_action()
+            config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
+            everdo_key = config.everdo_key()
+            r = requests.post(
+                f'https://localhost:11111/api/items?key={everdo_key}',
+                json={'title': title, 'note': note},
+                verify=False, #'./cert.pem',
+                timeout=60
+            )
+            os.rename(f'{processed_base()}/actionable/{file}', f'{processed_base()}/actioned/{file}')
+        print('done.')
+    except requests.exceptions.ConnectionError:
+        print('failed - connection refused, please retry later.')
 
 if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
-    print('Updating stats ... ', end='')
+    print('Updating stats ... ', flush=True, end='')
     Ratings().account_summary().write_lists()
     print('done.')
-    _do_sync()
-
+    token = _do_sync()
     post_list = PostList()
     post_list.plan()
     files = post_list.get_filenames()
@@ -196,6 +203,21 @@ if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
                     url = post.media_links()[link_index]
                 subprocess.run(['open', url], check=False)
 
+    print('Pushing scheduled boosts ... ', flush=True, end='')
+    config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
+    server = config.mastodon_server()
+    files = list(os.listdir(f'{processed_base()}/boostable'))
+    for file in files:
+        post = Post.from_file(f'{processed_base()}/boostable/{file}')
+        response = requests.post(
+            f'https://{server}/api/v1/statuses/{post.id()}/reblog',
+            headers={
+                'Authorization': f'Bearer {token}',
+            },
+            timeout=60
+        )
+        os.rename(f'{processed_base()}/boostable/{file}', f'{processed_base()}/boosted/{file}')
+    print('done.')
     _do_actions()
     files = list(os.listdir(f'{cache_base()}'))
     for file in files:

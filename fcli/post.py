@@ -89,3 +89,6 @@ class Post:
     def username(self):
         '''The username of the author'''
         return self._data['account']['username']
+
+    def id(self):
+        return self._data['id']
