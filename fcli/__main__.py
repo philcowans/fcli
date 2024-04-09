@@ -20,40 +20,55 @@ from .state import following_filename, state_filename, cache_base, staging_base,
 logging.captureWarnings(True)
 
 def _do_sync():
-    print('Authenticating ... ', flush=True)
+    with open(state_filename(), encoding='utf-8') as f:
+        state = json.load(f)
+    print('Authenticating ... ', flush=True)#
     config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
     server = config.mastodon_server()
     username = config.mastodon_username()
-    client_id = config.mastodon_client_id()
-    client_secret = config.mastodon_client_secret()
-    auth_url = (
-        f'https://{server}/oauth/authorize'
-        f'?client_id={client_id}'
-        '&scope=read+write'
-        '&redirect_uri=urn:ietf:wg:oauth:2.0:oob'
-        '&response_type=code'
-    )
-    print('')
-    code = input(f'Please visit\n\n{auth_url}\n\nand past code here: ')
+    token = state.get('token')
+    if token is not None:
+        url = f'https://{server}/api/v1/accounts/verify_credentials'
+        response = requests.get(
+            url,
+            headers={
+                'Authorization': f'Bearer {token}',
+            },
+            timeout=60
+        )
+        if response.status_code != 200:
+            token = None
+    if token is None:
+        client_id = config.mastodon_client_id()
+        client_secret = config.mastodon_client_secret()
+        auth_url = (
+            f'https://{server}/oauth/authorize'
+            f'?client_id={client_id}'
+            '&scope=read+write'
+            '&redirect_uri=urn:ietf:wg:oauth:2.0:oob'
+            '&response_type=code'
+        )
+        print('')
+        code = input(f'Please visit\n\n{auth_url}\n\nand past code here: ')
 
-    form_data = {
-        'client_id': client_id, 
-        'client_secret': client_secret,
-        'redirect_uri': 'urn:ietf:wg:oauth:2.0:oob',
-        'grant_type': 'authorization_code',
-        'code': code,
-        'scope': 'read write',
-    }
+        form_data = {
+            'client_id': client_id, 
+            'client_secret': client_secret,
+            'redirect_uri': 'urn:ietf:wg:oauth:2.0:oob',
+            'grant_type': 'authorization_code',
+            'code': code,
+            'scope': 'read write',
+        }
 
-    response = requests.post(
-        f'https://{server}/oauth/token',
-        data=form_data,
-        timeout=60
-    )
+        response = requests.post(
+            f'https://{server}/oauth/token',
+            data=form_data,
+            timeout=60
+        )
 
-    token = response.json()['access_token']
+        token = response.json()['access_token']
+        print('')
     user_id = accounts_lookup(username, server=server, token=token)['id']
-    print('')
     print('done.')
     print('Synchronising following list ... ', flush=True, end='')
     following = accounts_following(user_id, server=server, token=token)
@@ -83,8 +98,6 @@ def _do_sync():
         os.rename(f'{outbox_base()}/{file}', f'{sent_base()}/{file}')
     print('done.')
     print('Fetching new posts ... ', flush=True, end='')
-    with open(state_filename(), encoding='utf-8') as f:
-        state = json.load(f)
 
     max_id = state['max_id']
 
@@ -110,7 +123,8 @@ def _do_sync():
 
     with open(state_filename(), 'w', encoding='utf-8') as f:
         json.dump({
-            'max_id': max_id
+            'max_id': max_id,
+            'token': token,
         }, f)
     print('done.')
     return token
@@ -138,6 +152,10 @@ def _do_actions():
         print('failed - connection refused, please retry later.')
 
 if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
+    print('Welcome to fcli 1.0.0 - (c) 2023-2024 Phil Cowans')
+    print('Released under the MIT license, see LICENSE for details')
+    print('More info at https://github.com/philcowans/fcli')
+    print('')
     print('Updating stats ... ', flush=True, end='')
     Ratings().account_summary().write_lists()
     print('done.')
@@ -197,11 +215,14 @@ if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
             if action == 'o':
                 link_type = input('Link type? (L)ink / (A)ttachment')
                 link_index = int(input('Link number? (Zero indexed)'))
-                if link_type == 'l':
-                    url = post.content_links()[link_index]
-                elif link_type == 'a':
-                    url = post.media_links()[link_index]
-                subprocess.run(['open', url], check=False)
+                try:
+                    if link_type == 'l':
+                        url = post.content_links()[link_index]
+                    elif link_type == 'a':
+                        url = post.media_links()[link_index]
+                    subprocess.run(['open', url], check=False)
+                except IndexError:
+                    pass
 
     print('Pushing scheduled boosts ... ', flush=True, end='')
     config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
