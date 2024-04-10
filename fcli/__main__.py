@@ -213,16 +213,19 @@ if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
                 print(post)
                 print('')
             if action == 'o':
-                link_type = input('Link type? (L)ink / (A)ttachment')
-                link_index = int(input('Link number? (Zero indexed)'))
-                try:
-                    if link_type == 'l':
-                        url = post.content_links()[link_index]
-                    elif link_type == 'a':
-                        url = post.media_links()[link_index]
-                    subprocess.run(['open', url], check=False)
-                except IndexError:
-                    pass
+                link_type = input('Link type? (O)riginal / (L)ink / (A)ttachment')
+                if link_type == 'o':
+                    subprocess.run(['open', post.url()], check=False)
+                else:
+                    link_index = int(input('Link number? (Zero indexed)'))
+                    try:
+                        if link_type == 'l':
+                            url = post.content_links()[link_index]
+                        elif link_type == 'a':
+                            url = post.media_links()[link_index]
+                        subprocess.run(['open', url], check=False)
+                    except IndexError:
+                        pass
 
     print('Pushing scheduled boosts ... ', flush=True, end='')
     config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
