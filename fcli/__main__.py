@@ -22,7 +22,7 @@ logging.captureWarnings(True)
 def _do_sync():
     with open(state_filename(), encoding='utf-8') as f:
         state = json.load(f)
-    print('Authenticating ... ', flush=True)#
+    print('Authenticating ... ', flush=True, end='')
     config = Config(os.environ['HOME'] + '/.config/fcli/config.ini')
     server = config.mastodon_server()
     username = config.mastodon_username()
@@ -48,6 +48,7 @@ def _do_sync():
             '&redirect_uri=urn:ietf:wg:oauth:2.0:oob'
             '&response_type=code'
         )
+        print('')
         print('')
         code = input(f'Please visit\n\n{auth_url}\n\nand past code here: ')
 
