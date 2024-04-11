@@ -196,7 +196,7 @@ if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
         while not finished:
             action = input(
                 'Action? (A)ctionable / (B)oost / (I)nteresting / (N)ot interesting / '
-                '(U)nsure / (S)ource / (O)pen'
+                '(U)nsure / (S)ource / (O)pen '
             )
             if action == 'a':
                 os.rename(f'{staging_base()}/{file}', f'{processed_base()}/actionable/{file}')
@@ -214,11 +214,11 @@ if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
                 print(post)
                 print('')
             if action == 'o':
-                link_type = input('Link type? (O)riginal / (L)ink / (A)ttachment')
+                link_type = input('Link type? (O)riginal / (L)ink / (A)ttachment ')
                 if link_type == 'o':
                     subprocess.run(['open', post.url()], check=False)
                 else:
-                    link_index = int(input('Link number? (Zero indexed)'))
+                    link_index = int(input('Link number? (Zero indexed) '))
                     try:
                         if link_type == 'l':
                             url = post.content_links()[link_index]
