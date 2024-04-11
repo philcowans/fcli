@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fcli"
+version = "1.0.0"
+dependencies = [
+    "bs4",
+    "lxml",
+    "pandas",
+    "scipy",
+    "requests",
+]
