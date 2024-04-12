@@ -10,6 +10,10 @@ def accounts_lookup(username, server, token):
     url = _base_url(server) + f'/accounts/lookup?acct={username}'
     return _authenticated_response(url, token=token)
 
+def notifications(min_id, server, token):
+    url = _base_url(server) + f'/notifications?min_id={min_id}'
+    return _paginated_response(url, token=token)
+
 def _authenticated_response(url, token):
     response = requests.get(
         url,

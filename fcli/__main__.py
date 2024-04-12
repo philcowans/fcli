@@ -1,4 +1,6 @@
 '''Entry point into fcli application'''
+from collections import defaultdict
+
 import json
 import logging
 import os
@@ -12,7 +14,7 @@ import requests
 
 from .analytics import Ratings
 from .config import Config
-from .mastodon_api import accounts_following, accounts_lookup
+from .mastodon_api import accounts_following, accounts_lookup, notifications
 from .post import Post
 from .post_list import PostList
 from .state import following_filename, state_filename, cache_base, staging_base, processed_base, outbox_base, sent_base
@@ -122,12 +124,28 @@ def _do_sync():
             with open(f'{cache_base()}/{response_id}.json', 'w', encoding='utf-8') as f:
                 json.dump(response, f)
 
+    print('done.')
+    print('Fetching new notifications ... ', flush=True, end='')
+    max_notification_id = state.get('max_notfication_id', 0)
+    notifications_response = notifications(max_notification_id, server, token)
+    max_notification_id = max([int(notification['id']) for notification in notifications_response] + [max_notification_id])
+    notification_counts = defaultdict(lambda : 0)
+    for notification in notifications_response:
+        notification_counts[notification['type']] += 1
+    print('done.')
+
     with open(state_filename(), 'w', encoding='utf-8') as f:
         json.dump({
             'max_id': max_id,
+            'max_notification_id': max_notification_id,
             'token': token,
         }, f)
-    print('done.')
+
+    print('')
+    print('Completed sync.')
+    print('Notificaiton summary: ' + ', '.join([f'{k} ({v})' for k, v in notification_counts.items()]))
+    input('Start review?')
+
     return token
 
 def _do_actions():
