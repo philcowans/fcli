@@ -56,6 +56,8 @@ Finally, you'll need to create some directories to store state:
 {$HOME}/.fcli/outbox
 {$HOME}/.fcli/processed/actionable
 {$HOME}/.fcli/processed/actioned
+{$HOME}/.fcli/processed/boostable
+{$HOME}/.fcli/processed/boosted
 {$HOME}/.fcli/processed/interesting
 {$HOME}/.fcli/processed/not_interesting
 {$HOME}/.fcli/processed/skipped
@@ -68,38 +70,13 @@ with the codebase, so let me know if you run into any problems.
 
 ## Usage
 
-First of all, sync the local state with the server:
+Kick off the workflow using the default entry point:
 
 ```
-python -m fcli sync
+python -m fcli
 ```
 
 You'll be asked to authenticate via an OAuth 2.0 code. This step will also post
-the content of any files in `{$HOME}/.fcli/outbox`. Once you've done this, you
-can start the review workflow:
+the content of any files in `{$HOME}/.fcli/outbox`.
 
-```
-python -m fcli review
-```
-
-Finally, upload any actionable posts as inbox items in Everdo. Make sure the
-Everdo API is up when you run this step:
-
-```
-python -m fcli actions
-```
-
-You'll also need to manually move some files around:
-
-```
-mv ~/.fcli/processed/actionable/* ~/.fcli/processed/actioned/
-mv ~/.fcli/cache/* ~/.fcli/processed/skipped/
-```
-
-Finally, update the stats databases ussed by the algorithm:
-
-```
-python -m fcli stats
-```
-
-At somepoint soon I'll combine these steps into a single workflow.
+There are a few command line options you'll find if you look at the code, but they're obsolete.
