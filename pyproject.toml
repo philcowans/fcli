@@ -3,8 +3,19 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "fcli"
-version = "1.0.0"
+name = "fcli-client"
+version = "1.0.0rc1"
+authors = [
+  { name="Phil Cowans", email="phil-fcli@philcowans.com" },
+]
+description = "A workflow oriented, command line Mastodon client"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "bs4",
     "lxml",
@@ -12,3 +23,7 @@ dependencies = [
     "scipy",
     "requests",
 ]
+
+[project.urls]
+Homepage = "https://github.com/philcowans/fcli"
+Issues = "https://github.com/philcowans/fcli/issues"
