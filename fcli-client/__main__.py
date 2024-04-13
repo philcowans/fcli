@@ -202,13 +202,13 @@ if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
             print('')
         if len(post.content_links()) > 0:
             print('## Links')
-            for url in post.content_links():
-                print(url)
+            for idx, url in enumerate(post.content_links()):
+                print(f'{idx}: {url}')
             print('')
         if len(post.media_links()) > 0:
             print('## Attachments')
-            for url in post.media_links():
-                print(url)
+            for idx, url in enumerate(post.media_links()):
+                print(f'{idx}: {url}')
             print('')
         finished = False # pylint: disable=invalid-name
         while not finished:
