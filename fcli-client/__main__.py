@@ -126,7 +126,7 @@ def _do_sync():
 
     print('done.')
     print('Fetching new notifications ... ', flush=True, end='')
-    max_notification_id = state.get('max_notfication_id', 0)
+    max_notification_id = state.get('max_notification_id', 0)
     notifications_response = notifications(max_notification_id, server, token)
     max_notification_id = max([int(notification['id']) for notification in notifications_response] + [max_notification_id])
     notification_counts = defaultdict(lambda : 0)
@@ -141,10 +141,11 @@ def _do_sync():
             'token': token,
         }, f)
 
-    print('')
     print('Completed sync.')
+    print('')
     print('Notificaiton summary: ' + ', '.join([f'{k} ({v})' for k, v in notification_counts.items()]))
-    input('Start review?')
+    print('')
+    input('Press enter to start review')
 
     return token
 
@@ -171,7 +172,9 @@ def _do_actions():
         print('failed - connection refused, please retry later.')
 
 if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
-    print('Welcome to fcli 1.0.0 - (c) 2023-2024 Phil Cowans')
+    print('')
+    print('W\033[1melcome to fcli 1.0.0 - (c) 2023-2024 Phil Cowans\033[0m')
+    print('')
     print('Released under the MIT license, see LICENSE for details')
     print('More info at https://github.com/philcowans/fcli')
     print('')
@@ -236,14 +239,18 @@ if (len(sys.argv) == 1) or (sys.argv[1] == 'review'):
                 if link_type == 'o':
                     subprocess.run(['open', post.url()], check=False)
                 else:
-                    link_index = int(input('Link number? (Zero indexed) '))
                     try:
-                        if link_type == 'l':
-                            url = post.content_links()[link_index]
-                        elif link_type == 'a':
-                            url = post.media_links()[link_index]
-                        subprocess.run(['open', url], check=False)
-                    except IndexError:
+                        link_index = int(input('Link number? (Zero indexed) '))
+                        try:
+                            if link_type == 'l':
+                                url = post.content_links()[link_index]
+                                subprocess.run(['open', url], check=False)
+                            elif link_type == 'a':
+                                url = post.media_links()[link_index]
+                                subprocess.run(['open', url], check=False)
+                        except IndexError:
+                            pass
+                    except ValueError:
                         pass
 
     print('Pushing scheduled boosts ... ', flush=True, end='')
