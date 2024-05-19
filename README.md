@@ -1,6 +1,8 @@
-# FCLI
+# Fcli
 
-FCLI is an experimental command line Mastodon client. The goals of the project are:
+![The fcli logo; the word 'fcli' with the 'f' in horizontal rainbow stripes and the remainder of the word in black.](/assets/images/projects/fcli/fcli-logo-1024-rect.webp "The fcli logo")
+
+Fcli is an experimental command line Mastodon client. The goals of the project are:
 
 * To experiment with 'algorithms' to manage post volumes. Currently the number
 of posts reviewed per session is limited to 50, and feedback (interesting /
@@ -16,11 +18,13 @@ particular project and goal tracking, reading list management and next action
 tracking.
 
 The software is currently at a very stage of development, but I am using it on
-a daily basis. Please let me know if you're interested in the project.
+a daily basis. Please let me know if you're interested in the project. See
+[this post](http://philcowans.com/articles/2024-05-18-fcli-introduction.html)
+for more info on why I started the project and where I see it going.
 
 ## Installation
 
-FCLI is a python project, so you'll need a working python environment.
+Fcli is a python project, so you'll need a working python environment.
 Requirements are listed in `requirements.txt` in the usual way.
 
 This guide is for installation on Linux (which I use) - you'll need to vary
@@ -73,10 +77,10 @@ with the codebase, so let me know if you run into any problems.
 Kick off the workflow using the default entry point:
 
 ```
-python -m fcli
+python -m fcli-client
 ```
 
 You'll be asked to authenticate via an OAuth 2.0 code. This step will also post
 the content of any files in `{$HOME}/.fcli/outbox`.
 
-There are a few command line options you'll find if you look at the code, but they're obsolete.
+There are a few command line options you'll find if you look at the code but they're obsolete.
