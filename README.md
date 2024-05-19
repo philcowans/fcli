@@ -1,6 +1,6 @@
 # Fcli
 
-![The fcli logo; the word 'fcli' with the 'f' in horizontal rainbow stripes and the remainder of the word in black.](/assets/images/projects/fcli/fcli-logo-1024-rect.webp "The fcli logo")
+![The fcli logo; the word 'fcli' with the 'f' in horizontal rainbow stripes and the remainder of the word in black.](/assets/images/fcli-logo-1024-rect.webp "The fcli logo")
 
 Fcli is an experimental command line Mastodon client. The goals of the project are:
 
