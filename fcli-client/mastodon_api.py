@@ -11,7 +11,7 @@ def accounts_lookup(username, server, token):
     return _authenticated_response(url, token=token)
 
 def notifications(min_id, server, token):
-    url = _base_url(server) + f'/notifications?min_id={min_id}'
+    url = _base_url(server) + f'/notifications?min_id={min_id}&since_id={min_id}'
     return _paginated_response(url, token=token)
 
 def _authenticated_response(url, token):

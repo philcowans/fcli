@@ -23,14 +23,14 @@ def get_filenames_with_algorithm(algorithm, all_files):
     files = list(np.random.choice([
         file[0]
         for file in all_files
-        if (file[1].username() not in ['benb', 'HamiltonsLive'])
+        if (file[1].username() not in ['benb', 'HamiltonsLive', 'chicnow', 'yuribot', 'curved_ruler'])
         and (file[1].full_account_name() in hqas)
     ], size=algorithm.non_lqa_count, replace=False))
 
     files += list(np.random.choice([
         file[0]
         for file in all_files
-        if (file[1].username() not in ['benb', 'HamiltonsLive'])
+        if (file[1].username() not in ['benb', 'HamiltonsLive', 'chicnow', 'yuribot', 'curved_ruler'])
         and (file[1].full_account_name() not in hqas)
     ], size=algorithm.lqa_count, replace=False))
 

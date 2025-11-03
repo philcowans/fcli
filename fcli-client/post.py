@@ -27,6 +27,17 @@ class Post:
         '''The full account name of the author'''
         return self._data['account']['acct']
 
+    def reblog_display_name(self):
+        '''The display name of the author'''
+        return self._data['reblog']['account']['display_name']
+
+    def reblog_full_account_name(self):
+        '''The full account name of the author'''
+        return self._data['reblog']['account']['acct']
+
+    def created_at(self):
+        return self._data['created_at']
+
     @staticmethod
     def _extract_links(html):
         return [
@@ -92,3 +103,6 @@ class Post:
 
     def id(self):
         return self._data['id']
+
+    def in_reply_to_id(self):
+        return self._data['in_reply_to_id']

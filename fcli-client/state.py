@@ -39,3 +39,7 @@ def outbox_base():
 def sent_base():
     '''Base directory for sent posts'''
     return _state_base() + '/sent'
+
+def filter_filename():
+    '''Filename to use for filter rules'''
+    return _state_base() + '/filter.json'
